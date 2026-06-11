@@ -1,0 +1,36 @@
+<template id="profile-field">
+  <style>
+    :host { display: block; }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.72rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.2rem;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.3rem 0.5rem;
+      border: 1px solid #c7ccd3;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 0.875rem;
+      color: #1e293b;
+      transition: border-color 0.15s;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px #ede9fe;
+    }
+    input:disabled, textarea:disabled { background: #f8fafc; color: #94a3b8; }
+    textarea { resize: vertical; min-height: 4rem; }
+    [hidden] { display: none !important; }
+  </style>
+  <label id="label" for="input"></label>
+  <input id="input" />
+  <textarea id="textarea" hidden rows="3"></textarea>
+  <validation-message id="error"></validation-message>
+</template>

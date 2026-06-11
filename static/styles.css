@@ -14,3 +14,32 @@ input,
 textarea {
   font: inherit;
 }
+
+button {
+  padding: 0.35rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #1e40af;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button:hover:not(:disabled) { background: #1d35a0; }
+button:disabled { background: #94a3b8; cursor: default; }
+
+button.secondary {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+button.secondary:hover:not(:disabled) { background: #e2e8f0; }
+
+button.danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+button.danger:hover:not(:disabled) { background: #fecaca; }

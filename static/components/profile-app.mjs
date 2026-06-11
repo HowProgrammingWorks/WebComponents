@@ -1,121 +1,107 @@
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
-    :host {
-      display: block;
-    }
-    header {
-      background: #0f172a;
-      color: #fff;
-      padding: 0.85rem 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    a {
-      color: #93c5fd;
-    }
-    main {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 1rem;
-    }
-    .error {
-      color: #b42318;
-      padding: 1rem;
-      background: #fff;
-      border: 1px solid #f1c0be;
-      border-radius: 12px;
-    }
-  </style>
-  <header>
-    <strong>Professional Profiles</strong>
-    <a href="/" id="homeLink">Directory</a>
-  </header>
-  <main id="main"></main>
-`;
+import { getProfile } from '/api.mjs';
+import { buildProfileState } from '/shared/profile-domain.mjs';
+
+const template = document.getElementById('profile-app');
+
+const matchPattern = (pattern, pathname) => {
+  const patternParts = pattern.split('/');
+  const pathParts = pathname.split('/');
+  if (patternParts.length !== pathParts.length) return null;
+  const params = {};
+  for (let i = 0; i < patternParts.length; i++) {
+    const part = patternParts[i];
+    if (part.startsWith(':')) params[part.slice(1)] = pathParts[i];
+    else if (part !== pathParts[i]) return null;
+  }
+  return params;
+};
+
+const routes = {
+  '/': (app) => {
+    app.main.append(document.createElement('profile-directory'));
+  },
+  '/new': (app) => {
+    app.renderCreate();
+  },
+  '/profile/:username': async (app, { username }) => {
+    await app.renderProfile(username);
+  },
+};
 
 class ProfileApp extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot.append(template.content.cloneNode(true));
-    this.main = this.shadowRoot.getElementById('main');
-    this.homeLink = this.shadowRoot.getElementById('homeLink');
+    const content = template.content.cloneNode(true);
+    this.main = content.getElementById('main');
+    this.homeLink = content.getElementById('homeLink');
+    this.shadowRoot.append(content);
   }
 
   connectedCallback() {
     this.homeLink.addEventListener('click', (event) => {
       event.preventDefault();
-      this.go('/');
+      window.navigation.navigate('/');
     });
 
     this.shadowRoot.addEventListener('navigate-profile', (event) => {
-      this.go(event.detail.path);
+      window.navigation.navigate(event.detail.path);
     });
 
-    if ('navigation' in window && window.navigation) {
-      window.navigation.addEventListener('navigate', (event) => {
-        const url = new URL(event.destination.url);
-        if (url.origin !== window.location.origin) return;
-        event.intercept({
-          handler: async () => {
-            this.renderRoute(url.pathname);
-          },
-        });
+    window.navigation.addEventListener('navigate', (event) => {
+      const url = new URL(event.destination.url);
+      if (url.origin !== window.location.origin) return;
+      event.intercept({
+        handler: async () => {
+          this.renderRoute(url.pathname);
+        },
       });
-    }
+    });
 
-    window.addEventListener('popstate', () =>
-      this.renderRoute(window.location.pathname),
-    );
     this.renderRoute(window.location.pathname);
   }
 
-  go(path) {
-    if ('navigation' in window && window.navigation?.navigate) {
-      window.navigation.navigate(path);
+  async renderRoute(pathname) {
+    this.main.replaceChildren();
+
+    for (const [pattern, handler] of Object.entries(routes)) {
+      const params = matchPattern(pattern, pathname);
+      if (params === null) continue;
+      await handler(this, params);
       return;
     }
-    window.history.pushState({}, '', path);
-    this.renderRoute(path);
+
+    const error = document.createElement('div');
+    error.className = 'error';
+    error.textContent = 'Route not found';
+    this.main.append(error);
   }
 
-  async renderRoute(pathname) {
-    while (this.main.firstChild) this.main.removeChild(this.main.firstChild);
-
-    if (pathname === '/') {
-      const directory = document.createElement('profile-directory');
-      this.main.append(directory);
-      return;
-    }
-
-    if (pathname.startsWith('/profile/')) {
-      const username = pathname.slice('/profile/'.length);
-      await this.renderProfile(username);
-      return;
-    }
-
-    const message = document.createElement('div');
-    message.className = 'error';
-    message.textContent = 'Route not found';
-    this.main.append(message);
+  renderCreate() {
+    const form = document.createElement('profile-form');
+    form.setAttribute('mode', 'create');
+    form.editableId = true;
+    form.state = buildProfileState({});
+    form.addEventListener('profile-created', (event) => {
+      window.navigation.navigate(`/profile/${event.detail.id}`);
+    });
+    this.main.replaceChildren(form);
   }
 
   async renderProfile(username) {
-    const res = await fetch(`/profile/${encodeURIComponent(username)}`, {
-      headers: { Accept: 'application/json' },
-    });
-    const body = await res.json().catch(() => null);
-    if (!res.ok || !body || !body.ok) {
-      const message = document.createElement('div');
-      message.className = 'error';
-      message.textContent = 'Profile not found';
-      this.main.append(message);
+    const result = await getProfile(username);
+    if (!result.ok) {
+      const error = document.createElement('div');
+      error.className = 'error';
+      error.textContent = 'Profile not found';
+      this.main.append(error);
       return;
     }
     const form = document.createElement('profile-form');
-    form.state = body;
+    form.state = result;
+    form.addEventListener('profile-saved', () => {
+      window.navigation.navigate('/');
+    });
     this.main.append(form);
   }
 }

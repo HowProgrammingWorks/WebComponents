@@ -423,31 +423,18 @@ Components must minimize imperative DOM construction. Follow these guidelines:
 - Use `<slot>` for variable child content instead of injecting children from JavaScript.
 - Drive display updates by setting `textContent` on pre-queried named elements rather than building new nodes.
 - For repeated items (profile list), clone the item template once per data entry and fill named child elements, rather than calling `createElement` and manually building the subtree.
-- For field-to-display mappings (computed fields in `profile-summary`), declare the mapping as a data structure and iterate it:
+- For field-to-display mappings (computed fields in `profile-summary`), derive keys from shared metadata:
 
 ```js
-const COMPUTED_ROWS = [
-  { key: 'displayName', label: 'Display', format: (v) => v || '-' },
-  { key: 'age', label: 'Age', format: (v) => v ?? '-' },
-  { key: 'seniorityLevel', label: 'Seniority', format: (v) => v || '-' },
-  {
-    key: 'monthlyCapacityHours',
-    label: 'Monthly Capacity',
-    format: (v) => v ?? '-',
-  },
-  {
-    key: 'estimatedMonthlyIncome',
-    label: 'Monthly Income',
-    format: (v) => v ?? '-',
-  },
-  {
-    key: 'profileCompleteness',
-    label: 'Completeness',
-    format: (v) => (v != null ? `${v}%` : '-'),
-  },
-  { key: 'publicSlug', label: 'Public Slug', format: (v) => v || '-' },
-];
+import { profileFields } from '/shared/profile-domain.mjs';
+
+for (const [key, metadata] of Object.entries(profileFields)) {
+  if (!metadata.computed) continue;
+  // update pre-declared element by id
+}
 ```
+
+Computed fields are declared in `profileFields` with `computed: true`.
 
 - Avoid `while (el.firstChild) el.removeChild(el.firstChild)`. Prefer `el.replaceChildren()` or reset a container once.
 - Avoid dynamic element type switching at runtime (e.g. swapping `<input>` for `<textarea>`). Declare both in the template and show/hide with CSS via an attribute on the host.

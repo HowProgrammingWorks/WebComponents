@@ -1,0 +1,48 @@
+<template id="profile-form">
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    :host { display: block; max-width: 960px; margin: 1.5rem auto; padding: 0 1rem; }
+    form {
+      background: #fff;
+      border: 1px solid #dce2ea;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+    }
+    h3 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; color: #1e293b; }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 190px;
+      gap: 2.5rem;
+      align-items: start;
+    }
+    #fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 1.5rem;
+    }
+    #fields profile-field[name="bio"],
+    #fields profile-field[name="secondarySkills"] {
+      grid-column: 1 / -1;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #f0f3f7;
+    }
+    #status { color: #067647; font-size: 0.875rem; }
+  </style>
+  <form id="form">
+    <h3 id="title">Profile</h3>
+    <div class="layout">
+      <div id="fields"></div>
+      <profile-summary id="summary"></profile-summary>
+    </div>
+    <div class="actions">
+      <button id="save" type="submit">Save</button>
+      <span id="status"></span>
+    </div>
+  </form>
+</template>

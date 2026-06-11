@@ -1,10 +1,9 @@
 import './components/profile-app.mjs';
-import './components/profile-form.mjs';
-import './components/profile-field.mjs';
 import './components/profile-summary.mjs';
+import './components/profile-field.mjs';
+import './components/profile-form.mjs';
 import './components/validation-message.mjs';
 import './components/profile-directory.mjs';
 import './components/profile-search.mjs';
 import './components/profile-list.mjs';
 import './components/profile-item.mjs';
-import './components/profile-create-dialog.mjs';

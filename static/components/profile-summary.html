@@ -1,0 +1,41 @@
+<template id="profile-summary">
+  <style>
+    :host {
+      display: block;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      font-size: 0.8rem;
+      position: sticky;
+      top: 1rem;
+    }
+    .heading {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 0.4rem;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding: 0.2rem 0;
+      border-bottom: 1px solid #e9eef3;
+    }
+    .row:last-child { border-bottom: none; }
+    .lbl { color: #64748b; white-space: nowrap; }
+    .val { font-weight: 600; color: #1e293b; text-align: right; }
+  </style>
+  <div class="heading">Computed</div>
+  <div class="row"><span class="lbl">Name</span><span class="val" id="displayName">-</span></div>
+  <div class="row"><span class="lbl">Age</span><span class="val" id="age">-</span></div>
+  <div class="row"><span class="lbl">Seniority</span><span class="val" id="seniorityLevel">-</span></div>
+  <div class="row"><span class="lbl">Capacity</span><span class="val" id="monthlyCapacityHours">-</span></div>
+  <div class="row"><span class="lbl">Est. income</span><span class="val" id="estimatedMonthlyIncome">-</span></div>
+  <div class="row"><span class="lbl">Complete</span><span class="val" id="profileCompleteness">-</span></div>
+  <div class="row"><span class="lbl">Slug</span><span class="val" id="publicSlug">-</span></div>
+</template>

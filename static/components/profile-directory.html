@@ -1,0 +1,17 @@
+<template id="profile-directory">
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    :host { display: block; max-width: 900px; margin: 1.5rem auto; padding: 0 1rem; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+    .panel { background: #fff; border: 1px solid #dce2ea; border-radius: 12px; padding: 1rem; }
+  </style>
+  <div class="header">
+    <h2>Profile Directory</h2>
+    <button id="create" type="button">+ Create Profile</button>
+  </div>
+  <div class="panel">
+    <profile-search id="search"></profile-search>
+    <profile-list id="list"></profile-list>
+  </div>
+</template>

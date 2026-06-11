@@ -1,11 +1,13 @@
 class ProfileList extends HTMLElement {
+  #items = [];
+
   set items(value) {
-    this._items = Array.isArray(value) ? value : [];
+    this.#items = value;
     this.render();
   }
 
   get items() {
-    return this._items || [];
+    return this.#items;
   }
 
   connectedCallback() {
@@ -13,20 +15,21 @@ class ProfileList extends HTMLElement {
   }
 
   render() {
-    while (this.firstChild) this.removeChild(this.firstChild);
-    if (this.items.length === 0) {
+    const items = this.#items;
+    if (items.length === 0) {
       const empty = document.createElement('p');
       empty.textContent = 'No profiles found.';
-      this.append(empty);
+      this.replaceChildren(empty);
       return;
     }
-    for (const item of this.items) {
+    const nodes = items.map((item) => {
       const el = document.createElement('profile-item');
       el.setAttribute('profile-id', item.id);
       el.setAttribute('display-name', item.displayName || item.id);
       el.setAttribute('email', item.email || '');
-      this.append(el);
-    }
+      return el;
+    });
+    this.replaceChildren(...nodes);
   }
 }
 

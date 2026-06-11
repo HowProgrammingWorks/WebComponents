@@ -1,0 +1,14 @@
+<template id="profile-create-dialog">
+  <style>
+    dialog { border: none; border-radius: 12px; min-width: 420px; max-width: 680px; }
+    .actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+  </style>
+  <dialog id="dialog">
+    <h3>Create profile</h3>
+    <profile-form id="form" mode="create"></profile-form>
+    <div class="actions">
+      <button type="button" id="cancel">Cancel</button>
+      <button type="button" id="create">Create</button>
+    </div>
+  </dialog>
+</template>

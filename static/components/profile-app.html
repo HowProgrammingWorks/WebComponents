@@ -1,0 +1,21 @@
+<template id="profile-app">
+  <style>
+    :host { display: block; }
+    header {
+      background: #0f172a; color: #fff;
+      padding: 0.85rem 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    a { color: #93c5fd; }
+    main { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+    .error {
+      color: #b42318; padding: 1rem;
+      background: #fff; border: 1px solid #f1c0be; border-radius: 12px;
+    }
+  </style>
+  <header>
+    <strong>Professional Profiles</strong>
+    <a href="/" id="homeLink">Directory</a>
+  </header>
+  <main id="main"></main>
+</template>

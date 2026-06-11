@@ -21,18 +21,19 @@ const normalizeSkills = (value) => {
   return value.map(toString).filter((item) => item.length > 0);
 };
 
-const PROFILE_FIELDS_METADATA = {
+const profileFields = {
   id: {
     type: 'string',
+    label: 'Username',
     pattern: /^[a-z0-9][a-z0-9-]{1,63}$/i,
     message: 'Username contains unsupported characters',
   },
   firstName: { type: 'string' },
   lastName: { type: 'string' },
-  email: { type: 'string' },
+  email: { type: 'string', inputType: 'email' },
   country: { type: 'string' },
   city: { type: 'string' },
-  birthDate: { type: 'string' },
+  birthDate: { type: 'string', inputType: 'date' },
   experienceYears: {
     type: 'integer',
     min: 0,
@@ -40,7 +41,10 @@ const PROFILE_FIELDS_METADATA = {
     message: 'Experience years must be an integer between 0 and 60',
   },
   primarySkill: { type: 'string' },
-  secondarySkills: { type: 'array' },
+  secondarySkills: {
+    type: 'array',
+    label: 'Secondary Skills (comma separated)',
+  },
   weeklyAvailabilityHours: {
     type: 'integer',
     min: 0,
@@ -54,7 +58,14 @@ const PROFILE_FIELDS_METADATA = {
     message: 'Hourly rate must be between 0 and 1000',
   },
   currency: { type: 'string' },
-  bio: { type: 'string' },
+  bio: { type: 'string', multiline: true },
+  displayName: { type: 'string', computed: true },
+  age: { type: 'integer', computed: true },
+  seniorityLevel: { type: 'string', computed: true },
+  monthlyCapacityHours: { type: 'integer', computed: true },
+  estimatedMonthlyIncome: { type: 'number', computed: true },
+  profileCompleteness: { type: 'integer', computed: true },
+  publicSlug: { type: 'string', computed: true },
 };
 
 const normalizeByMetadata = (key, metadata, value) => {
@@ -128,11 +139,15 @@ const seniorityFromExperience = (years) => {
 };
 
 const completeness = (profile) => {
-  const profileFieldKeys = Object.keys(PROFILE_FIELDS_METADATA);
+  const profileFieldKeys = Object.keys(profileFields).filter(
+    (key) => !profileFields[key].computed,
+  );
   const filled = profileFieldKeys.reduce((acc, key) => {
     const value = profile[key];
     if (Array.isArray(value)) return acc + (value.length > 0 ? 1 : 0);
-    if (typeof value === 'number') { return acc + (Number.isFinite(value) ? 1 : 0); }
+    if (typeof value === 'number') {
+      return acc + (Number.isFinite(value) ? 1 : 0);
+    }
     return acc + (toString(value).length > 0 ? 1 : 0);
   }, 0);
   return Math.round((filled / profileFieldKeys.length) * 100);
@@ -141,7 +156,8 @@ const completeness = (profile) => {
 const normalizeProfile = (profile) => {
   const source = profile && typeof profile === 'object' ? profile : {};
   const normalized = {};
-  for (const [key, metadata] of Object.entries(PROFILE_FIELDS_METADATA)) {
+  for (const [key, metadata] of Object.entries(profileFields)) {
+    if (metadata.computed) continue;
     normalized[key] = normalizeByMetadata(key, metadata, source[key]);
   }
   return normalized;
@@ -152,16 +168,17 @@ const validateProfile = (profile, now = new Date()) => {
   const normalized = normalizeProfile(profile);
   const today = isValidDate(now) ? new Date(now.valueOf()) : new Date();
   const birthDate = parseDate(normalized.birthDate);
-  const hasIdPattern = Boolean(PROFILE_FIELDS_METADATA.id.pattern);
+  const hasIdPattern = Boolean(profileFields.id.pattern);
   const hasInvalidIdPattern =
     normalized.id &&
     hasIdPattern &&
-    !PROFILE_FIELDS_METADATA.id.pattern.test(normalized.id);
+    !profileFields.id.pattern.test(normalized.id);
   const hasEmptySecondarySkill = normalized.secondarySkills.some(
     (item) => toString(item).length === 0,
   );
 
-  for (const [key, metadata] of Object.entries(PROFILE_FIELDS_METADATA)) {
+  for (const [key, metadata] of Object.entries(profileFields)) {
+    if (metadata.computed) continue;
     if (!matchesExpectedType(normalized[key], metadata.type)) {
       errors[key] = `Expected ${metadata.type} value`;
     }
@@ -169,13 +186,14 @@ const validateProfile = (profile, now = new Date()) => {
 
   if (!normalized.id) errors.id = 'Username is required';
   if (hasInvalidIdPattern) {
-    errors.id = PROFILE_FIELDS_METADATA.id.message;
+    errors.id = profileFields.id.message;
   }
   if (!normalized.firstName) errors.firstName = 'First name is required';
   if (!normalized.lastName) errors.lastName = 'Last name is required';
   if (!normalized.email.includes('@')) errors.email = 'Invalid email';
 
-  for (const [key, metadata] of Object.entries(PROFILE_FIELDS_METADATA)) {
+  for (const [key, metadata] of Object.entries(profileFields)) {
+    if (metadata.computed) continue;
     const fieldError = validateField(normalized[key], metadata);
     if (fieldError) errors[key] = fieldError;
   }
@@ -216,16 +234,12 @@ const buildProfileState = (profile, now = new Date()) => {
   const normalized = normalizeProfile(profile);
   const errors = validateProfile(normalized, now);
   const computed = calculateProfile(normalized, now);
-  return {
-    profile: normalized,
-    computed,
-    errors,
-    valid: Object.keys(errors).length === 0,
-  };
+  const valid = Object.keys(errors).length === 0;
+  return { profile: normalized, computed, errors, valid };
 };
 
 export {
-  PROFILE_FIELDS_METADATA,
+  profileFields,
   normalizeProfile,
   validateProfile,
   calculateProfile,
