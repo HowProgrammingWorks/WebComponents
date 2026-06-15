@@ -8,20 +8,20 @@ const fetchJson = async (url, options = {}) => {
   return { ok: res.ok, status: res.status, body };
 };
 
+const errorsFrom = (body, fallback) => body?.errors ?? { general: fallback };
+
 const getProfile = async (username) => {
   const options = { headers: { Accept: 'application/json' } };
   const { ok, body } = await fetchJson(profileUrl(username), options);
-  if (!ok || !body?.ok) return { ok: false, error: 'Profile not found' };
-  return body;
+  if (ok) return body;
+  return { ok: false, errors: { general: 'Profile not found' } };
 };
 
 const saveProfile = async (username, data) => {
   const json = JSON.stringify(data);
   const options = { method: 'POST', headers: HEADERS, body: json };
   const { ok, body } = await fetchJson(profileUrl(username), options);
-  if (!ok || !body?.ok) {
-    return { ok: false, errors: body?.errors || { general: 'Save failed' } };
-  }
+  if (!ok) return { ok: false, errors: errorsFrom(body, 'Save failed') };
   return body;
 };
 
@@ -36,24 +36,17 @@ const searchProfiles = async ({ name = '', email = '' } = {}) => {
   if (name) params.set('name', name);
   if (email) params.set('email', email);
   const query = params.toString();
-  const url = query ? `/profile?${query}` : '/profile';
+  const url = query ? `/search?${query}` : '/search';
   const { ok, body } = await fetchJson(url);
-  if (!ok || !body?.ok) return { ok: false, items: [] };
+  if (!ok) return { ok: false, items: [] };
   return { ok: true, items: body.items };
 };
 
 const createProfile = async (data) => {
   const json = JSON.stringify(data);
-  const options = { method: 'POST', headers: HEADERS, body: json };
-  const { ok, status, body } = await fetchJson('/profiles', options);
-  if (!ok || !body?.ok) {
-    const validationErrors = body?.errors;
-    const idError = body?.error
-      ? { id: body.error }
-      : { general: 'Create failed' };
-    const errors = validationErrors || idError;
-    return { ok: false, status, errors };
-  }
+  const options = { method: 'PUT', headers: HEADERS, body: json };
+  const { ok, body } = await fetchJson('/profile', options);
+  if (!ok) return { ok: false, errors: errorsFrom(body, 'Create failed') };
   return body;
 };
 

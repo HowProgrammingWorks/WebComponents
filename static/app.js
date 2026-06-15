@@ -1,0 +1,9 @@
+import './components/profile-app.js';
+import './components/profile-summary.js';
+import './components/profile-field.js';
+import './components/profile-form.js';
+import './components/validation-message.js';
+import './components/profile-directory.js';
+import './components/profile-search.js';
+import './components/profile-list.js';
+import './components/profile-item.js';

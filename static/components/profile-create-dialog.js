@@ -1,5 +1,5 @@
-import { buildProfileState } from '/shared/profile-domain.mjs';
-import { createProfile } from '/api.mjs';
+import { buildProfileState } from '/shared/profile.js';
+import { createProfile } from '/api.js';
 
 const template = document.getElementById('profile-create-dialog');
 
@@ -22,7 +22,7 @@ class ProfileCreateDialog extends HTMLElement {
     this.form.editableId = true;
     this.form.addEventListener('profile-state-change', (event) => {
       this.#state = event.detail.state;
-      this.createBtn.disabled = !this.#state.valid;
+      this.createBtn.disabled = this.#state.errors !== undefined;
     });
     this.cancelBtn.addEventListener('click', () => this.close());
     this.createBtn.addEventListener('click', () => this.submit());
@@ -31,7 +31,7 @@ class ProfileCreateDialog extends HTMLElement {
   open() {
     this.#state = buildProfileState({});
     this.form.state = this.#state;
-    this.createBtn.disabled = !this.#state.valid;
+    this.createBtn.disabled = this.#state.errors !== undefined;
     this.dialog.showModal();
   }
 
@@ -40,7 +40,7 @@ class ProfileCreateDialog extends HTMLElement {
   }
 
   async submit() {
-    if (!this.#state.valid) return;
+    if (!this.#state.errors) return;
     const result = await createProfile(this.#state.profile);
     if (!result.ok) {
       this.form.serverErrors = result.errors;

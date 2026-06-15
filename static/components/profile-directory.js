@@ -1,4 +1,4 @@
-import { searchProfiles, deleteProfile } from '/api.mjs';
+import { searchProfiles, deleteProfile } from '/api.js';
 
 const template = document.getElementById('profile-directory');
 

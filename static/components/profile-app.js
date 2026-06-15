@@ -1,5 +1,5 @@
-import { getProfile } from '/api.mjs';
-import { buildProfileState } from '/shared/profile-domain.mjs';
+import { getProfile } from '/api.js';
+import { buildProfileState } from '/shared/profile.js';
 
 const template = document.getElementById('profile-app');
 

@@ -1,12 +1,11 @@
-import { profileFields, buildProfileState } from '/shared/profile-domain.mjs';
-import { saveProfile, createProfile } from '/api.mjs';
-import './profile-summary.mjs';
+import { profileFields, buildProfileState } from '/shared/profile.js';
+import { saveProfile, createProfile } from '/api.js';
+import './profile-summary.js';
 
 const template = document.getElementById('profile-form');
 
 class ProfileForm extends HTMLElement {
   #state = buildProfileState({});
-  #serverErrors = {};
   #editableId = false;
   #fieldEls = new Map();
 
@@ -37,7 +36,6 @@ class ProfileForm extends HTMLElement {
 
   set state(value) {
     this.#state = value;
-    this.#serverErrors = {};
     this.render();
   }
 
@@ -46,7 +44,8 @@ class ProfileForm extends HTMLElement {
   }
 
   set serverErrors(value) {
-    this.#serverErrors = value || {};
+    if (!value) return;
+    this.#state = { ...this.#state, errors: value };
     this.render();
   }
 
@@ -100,7 +99,6 @@ class ProfileForm extends HTMLElement {
     }
 
     this.#state = buildProfileState(next);
-    this.#serverErrors = {};
     const event = new CustomEvent('profile-state-change', {
       detail: { state: this.#state },
     });
@@ -109,7 +107,7 @@ class ProfileForm extends HTMLElement {
   }
 
   async handleSave() {
-    if (!this.state.valid) return;
+    if (this.state.errors) return;
     const username = this.state.profile.id;
 
     if (this.isCreate) {
@@ -145,7 +143,7 @@ class ProfileForm extends HTMLElement {
     );
     if (!this.isConnected) return;
     const profile = this.state?.profile || {};
-    const errors = { ...this.state?.errors, ...this.#serverErrors };
+    const errors = this.state?.errors ?? {};
 
     let title = 'Profile';
     if (this.isCreate) title = 'Create Profile';
@@ -153,7 +151,7 @@ class ProfileForm extends HTMLElement {
     this.titleEl.textContent = title;
 
     this.saveBtn.textContent = this.isCreate ? 'Create' : 'Save';
-    this.saveBtn.disabled = !this.state.valid;
+    this.saveBtn.disabled = this.state.errors !== undefined;
 
     for (const [name, metadata] of Object.entries(profileFields)) {
       if (metadata.computed) continue;

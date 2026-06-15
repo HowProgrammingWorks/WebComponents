@@ -1,4 +1,4 @@
-import { profileFields } from '/shared/profile-domain.mjs';
+import { profileFields } from '/shared/profile.js';
 
 const template = document.getElementById('profile-summary');
 
