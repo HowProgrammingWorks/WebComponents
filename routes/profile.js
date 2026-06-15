@@ -1,11 +1,11 @@
 import { readFile, writeFile, unlink, stat } from 'node:fs/promises';
 import path from 'node:path';
 import config from '../config.js';
-import { buildProfileState, profileFields } from '../shared/profile.js';
+import { buildState, schema } from '../shared/profile.js';
 
 const usernamePath = (username) => {
   const id = typeof username === 'string' ? username.trim() : '';
-  if (!id || !profileFields.id.pattern.test(id)) return null;
+  if (!id || !schema.id.pattern.test(id)) return null;
   return path.join(config.PROFILE_DIR, `${id}.json`);
 };
 
@@ -26,7 +26,7 @@ const saveProfileState = async (username, incoming) => {
   }
 
   const merged = { ...incoming, id: username };
-  const state = buildProfileState(merged);
+  const state = buildState(merged);
 
   if (state.errors) {
     return { status: 422, json: { ok: false, ...state } };
@@ -46,7 +46,7 @@ const getProfile = async (channel, username) => {
 
   try {
     const source = await readProfile(username);
-    const state = buildProfileState(source);
+    const state = buildState(source);
     return { json: { ok: true, ...state } };
   } catch (error) {
     if (error?.code === 'ENOENT') return { status: 404, html: 'Not found' };
@@ -80,7 +80,7 @@ const createProfile = async (channel) => {
     if (error?.code !== 'ENOENT') throw error;
   }
 
-  const state = buildProfileState({ ...body, id: requestedId });
+  const state = buildState({ ...body, id: requestedId });
   if (state.errors) {
     return { status: 422, json: { ok: false, ...state } };
   }

@@ -419,15 +419,15 @@ Components must minimize imperative DOM construction. Follow these guidelines:
 - For field-to-display mappings (computed fields in `profile-summary`), derive keys from shared metadata:
 
 ```js
-import { profileFields } from '/shared/profile.js';
+import { schema } from '/shared/profile.js';
 
-for (const [key, metadata] of Object.entries(profileFields)) {
+for (const [key, metadata] of Object.entries(schema)) {
   if (!metadata.computed) continue;
   // update pre-declared element by id
 }
 ```
 
-Computed fields are declared in `profileFields` with `computed: true`.
+Computed fields are declared in `schema` with `computed: true`.
 
 - Avoid `while (el.firstChild) el.removeChild(el.firstChild)`. Prefer `el.replaceChildren()` or reset a container once.
 - Avoid dynamic element type switching at runtime (e.g. swapping `<input>` for `<textarea>`). Declare both in the template and show/hide with CSS via an attribute on the host.
@@ -462,28 +462,23 @@ Create one shared module used by both client and server:
 It must export pure functions:
 
 ```js
-const normalizeProfile = (profile) => {
+const normalize = (profile) => {
   // returns new normalized object
 };
 
-const validateProfile = (profile, now = new Date()) => {
+const validate = (profile, now = new Date()) => {
   // returns errors object when invalid
 };
 
-const calculateProfile = (profile, now = new Date()) => {
+const calculate = (profile, now = new Date()) => {
   // returns computed fields
 };
 
-const buildProfileState = (profile, now = new Date()) => {
+const buildState = (profile, now = new Date()) => {
   // returns { profile, computed, errors? }
 };
 
-export {
-  normalizeProfile,
-  validateProfile,
-  calculateProfile,
-  buildProfileState,
-};
+export { normalize, validate, calculate, buildState };
 ```
 
 - Functions must not mutate arguments.

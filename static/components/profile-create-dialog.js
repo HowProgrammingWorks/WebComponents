@@ -1,10 +1,10 @@
-import { buildProfileState } from '/shared/profile.js';
+import { buildState } from '/shared/profile.js';
 import { createProfile } from '/api.js';
 
 const template = document.getElementById('profile-create-dialog');
 
 class ProfileCreateDialog extends HTMLElement {
-  #state = buildProfileState({});
+  #state = buildState({});
 
   constructor() {
     super();
@@ -29,7 +29,7 @@ class ProfileCreateDialog extends HTMLElement {
   }
 
   open() {
-    this.#state = buildProfileState({});
+    this.#state = buildState({});
     this.form.state = this.#state;
     this.createBtn.disabled = this.#state.errors !== undefined;
     this.dialog.showModal();
@@ -40,7 +40,7 @@ class ProfileCreateDialog extends HTMLElement {
   }
 
   async submit() {
-    if (!this.#state.errors) return;
+    if (this.#state.errors) return;
     const result = await createProfile(this.#state.profile);
     if (!result.ok) {
       this.form.serverErrors = result.errors;

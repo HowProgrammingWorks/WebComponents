@@ -1,11 +1,11 @@
-import { profileFields, buildProfileState } from '/shared/profile.js';
+import { schema, buildState } from '/shared/profile.js';
 import { saveProfile, createProfile } from '/api.js';
 import './profile-summary.js';
 
 const template = document.getElementById('profile-form');
 
 class ProfileForm extends HTMLElement {
-  #state = buildProfileState({});
+  #state = buildState({});
   #editableId = false;
   #fieldEls = new Map();
 
@@ -60,7 +60,7 @@ class ProfileForm extends HTMLElement {
 
   renderFields() {
     const nodes = [];
-    for (const [name, metadata] of Object.entries(profileFields)) {
+    for (const [name, metadata] of Object.entries(schema)) {
       if (metadata.computed) continue;
       const field = document.createElement('profile-field');
       field.setAttribute('name', name);
@@ -90,15 +90,15 @@ class ProfileForm extends HTMLElement {
         .map((s) => s.trim())
         .filter(Boolean);
     } else if (
-      profileFields[name]?.type === 'number' ||
-      profileFields[name]?.type === 'integer'
+      schema[name]?.type === 'number' ||
+      schema[name]?.type === 'integer'
     ) {
       next[name] = value === '' ? 0 : Number(value);
     } else {
       next[name] = value;
     }
 
-    this.#state = buildProfileState(next);
+    this.#state = buildState(next);
     const event = new CustomEvent('profile-state-change', {
       detail: { state: this.#state },
     });
@@ -153,7 +153,7 @@ class ProfileForm extends HTMLElement {
     this.saveBtn.textContent = this.isCreate ? 'Create' : 'Save';
     this.saveBtn.disabled = this.state.errors !== undefined;
 
-    for (const [name, metadata] of Object.entries(profileFields)) {
+    for (const [name, metadata] of Object.entries(schema)) {
       if (metadata.computed) continue;
       const field = this.#fieldEls.get(name);
       if (!field) continue;

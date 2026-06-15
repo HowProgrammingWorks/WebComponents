@@ -1,5 +1,5 @@
 import { getProfile } from '/api.js';
-import { buildProfileState } from '/shared/profile.js';
+import { buildState } from '/shared/profile.js';
 
 const template = document.getElementById('profile-app');
 
@@ -81,7 +81,7 @@ class ProfileApp extends HTMLElement {
     const form = document.createElement('profile-form');
     form.setAttribute('mode', 'create');
     form.editableId = true;
-    form.state = buildProfileState({});
+    form.state = buildState({});
     form.addEventListener('profile-created', (event) => {
       window.navigation.navigate(`/profile/${event.detail.id}`);
     });

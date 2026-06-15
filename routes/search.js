@@ -1,13 +1,13 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import config from '../config.js';
-import { buildProfileState } from '../shared/profile.js';
+import { buildState } from '../shared/profile.js';
 
 const readProfile = async (file) => {
   try {
     const fileName = path.join(config.PROFILE_DIR, file);
     const raw = await readFile(fileName, 'utf8');
-    const { profile, computed } = buildProfileState(JSON.parse(raw));
+    const { profile, computed } = buildState(JSON.parse(raw));
     const { id, email } = profile;
     return { id, displayName: computed.displayName, email };
   } catch {

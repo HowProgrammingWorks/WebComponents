@@ -6,9 +6,12 @@
   "country": "Roman Empire",
   "city": "Rome",
   "birthDate": "0130-02-17",
-  "experienceYears": 6,
+  "experienceYears": 9,
   "primarySkill": "Operations",
-  "secondarySkills": ["Planning", "Leadership"],
+  "secondarySkills": [
+    "Planning",
+    "Leadership"
+  ],
   "weeklyAvailabilityHours": 30,
   "hourlyRate": 90,
   "currency": "EUR",

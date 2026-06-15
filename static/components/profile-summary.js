@@ -1,4 +1,4 @@
-import { profileFields } from '/shared/profile.js';
+import { schema } from '/shared/profile.js';
 
 const template = document.getElementById('profile-summary');
 
@@ -32,7 +32,7 @@ class ProfileSummary extends HTMLElement {
       }
     }
 
-    for (const [key, metadata] of Object.entries(profileFields)) {
+    for (const [key, metadata] of Object.entries(schema)) {
       if (!metadata.computed) continue;
       const el = this.shadowRoot.getElementById(key);
       if (!el) continue;
