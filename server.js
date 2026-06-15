@@ -1,12 +1,12 @@
 import { createServer } from 'node:http';
 
-import config from './config.mjs';
-import Channel from './lib/channel.mjs';
-import router from './lib/router.mjs';
+import config from './config.js';
+import Channel from './lib/channel.js';
+import router from './lib/router.js';
 import staticFiles from './routes/static.js';
 
 await staticFiles.loadCache(config.STATIC_DIR);
-const routingTable = await router.buildRoutingTable();
+const routes = await router.loadRoutes();
 
 createServer(async (req, res) => {
   const channel = new Channel(req, res);
@@ -14,7 +14,7 @@ createServer(async (req, res) => {
     if (!req.url) return void channel.badRequest();
     const pathname = req.url.split('?')[0];
     const segments = pathname.split('/');
-    const route = routingTable[segments[1]];
+    const route = routes[segments[1]];
     if (route) {
       await route(req, res, segments);
       return;

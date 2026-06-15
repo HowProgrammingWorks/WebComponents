@@ -6,8 +6,8 @@
   "author": "Timur Shemsedinov <timur.shemsedinov@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "lint": "eslint . && prettier --check --no-error-on-unmatched-pattern \"**/*.js\" \"**/*.mjs\" \"**/*.json\" \"**/*.md\" \"**/*.ts\"",
-    "fix": "eslint . --fix && prettier --write --no-error-on-unmatched-pattern \"**/*.js\" \"**/*.mjs\" \"**/*.json\" \"**/*.md\" \"**/*.ts\""
+    "lint": "eslint . && prettier --check --no-error-on-unmatched-pattern \"**/*.js\" \"**/*.json\" \"**/*.md\" \"**/*.ts\"",
+    "fix": "eslint . --fix && prettier --write --no-error-on-unmatched-pattern \"**/*.js\" \"**/*.json\" \"**/*.md\" \"**/*.ts\""
   },
   "devDependencies": {
     "eslint": "^10.4.1",

@@ -1,6 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import Channel from '../lib/channel.mjs';
+import Channel from '../lib/channel.js';
 
 const PLACEHOLDER = '<!-- {{templates}} -->';
 const fileCache = new Map();

@@ -236,8 +236,8 @@ The server must:
 - support `POST /profile/{username}` for any valid username
 - support `PUT /profile/{username}` (optional alias of POST for updates)
 - support `DELETE /profile/{username}` for deleting existing profile files
-- support `GET /profile?name={value}&email={value}` returning filtered profile summaries
-- support `POST /profiles` for creating a new profile
+- support `GET /search?name={value}&email={value}` returning filtered profile summaries
+- support `PUT /profile` for creating a new profile
 - treat the URL username as the profile file name without the `.json` extension
 - accept only safe username values that can be used as file names
 - return correct `Content-Type`
@@ -255,46 +255,39 @@ The server must:
 
 ### Server Routing
 
-The request dispatcher must be implemented as a **collection of route handlers**, not as a chain of `if/else` or `switch` statements. Each route is a plain object or function entry in a routing table. The dispatcher matches the incoming method and pathname against the table and delegates to the matched handler.
+The request dispatcher must be implemented as a **collection of route handlers**, not as a chain of `if/else` or `switch` statements in `server.js`. At startup the server scans `routes/` and builds a routing table that maps the **first URL path segment** to a route module. The dispatcher looks up that segment and delegates the request.
 
-Route handlers must be defined as separate named functions or imported from separate modules. The main `server.js` file must only contain the routing table, the dispatcher, and the server bootstrap.
+Route modules are plain `.js` files. Each module exports a default object of HTTP method handlers: `{ GET, POST, PUT, DELETE }`. The router maps the **first URL path segment** to a module file (`search.js` → `/search`, `profile.js` → `/profile/...`). Handler arity defines the expected path shape: a handler `(channel)` serves the mount path (`/search`), a handler `(channel, username)` serves one segment below (`/profile/marcus`).
 
 Suggested route modules:
 
 ```text
 routes/
-  static.js      handles static file serving
-  profile.js     handles /profile/:username (GET, POST, PUT, DELETE)
-  profiles.js    handles /profiles (POST)
-  directory.js   handles /profile (GET, search)
+  static.js      static file cache and serving (not a route module)
+  search.js      GET /search?name=&email=
+  profile.js     GET|POST|DELETE /profile/{username}, PUT /profile, PUT /profile/{username}
 ```
 
-Example routing table structure (method + path pattern as key):
+Example: `routes/profile.js` receives requests whose first segment is `profile`:
 
 ```js
-const routes = [
-  { method: 'GET', pattern: /^\/$/, handler: serveIndex },
-  { method: 'GET', pattern: /^\/profile$/, handler: listProfiles },
-  { method: 'POST', pattern: /^\/profiles$/, handler: createProfile },
-  {
-    method: 'GET',
-    pattern: /^\/profile\/(?<username>[^/]+)$/,
-    handler: getProfile,
-  },
-  {
-    method: 'POST',
-    pattern: /^\/profile\/(?<username>[^/]+)$/,
-    handler: saveProfile,
-  },
-  {
-    method: 'DELETE',
-    pattern: /^\/profile\/(?<username>[^/]+)$/,
-    handler: deleteProfile,
-  },
-];
+export default {
+  GET: getProfile,
+  POST: saveProfile,
+  PUT: createProfile,
+  DELETE: removeProfile,
+};
 ```
 
-The dispatcher iterates the table, matches method and URL, extracts named groups, and calls the handler with `(req, res, params)`.
+Example: `routes/search.js` handles profile directory search:
+
+```js
+export default {
+  GET: searchProfiles,
+};
+```
+
+The router loads modules dynamically with `readdir`. Segment depth and HTTP method dispatch live in the router; route modules contain only named handlers and the method map. `server.js` contains only bootstrap and dispatch.
 
 ## 6. Client Requirements
 
@@ -341,10 +334,10 @@ profile-create-dialog
 All `fetch` calls must be encapsulated in a single dedicated module:
 
 ```text
-static/api.mjs
+static/api.js
 ```
 
-This module exports one async function per server endpoint. Components must never call `fetch` directly. They import and call the API functions from `api.mjs`.
+This module exports one async function per server endpoint. Components must never call `fetch` directly. They import and call the API functions from `api.js`.
 
 ```js
 const getProfile = async (username) => { ... };
@@ -356,15 +349,15 @@ const createProfile = async (data) => { ... };
 export { getProfile, saveProfile, deleteProfile, searchProfiles, createProfile };
 ```
 
-Each function returns a normalized result object. HTTP error handling, JSON parsing and status checks happen inside `api.mjs`, not in components.
+Each function returns a normalized result object. HTTP error handling, JSON parsing and status checks happen inside `api.js`, not in components.
 
 ### Template Strategy
 
-Each component's Shadow DOM markup lives in a dedicated `.html` file co-located with its `.mjs` file:
+Each component's Shadow DOM markup lives in a dedicated `.html` file co-located with its `.js` file:
 
 ```text
 static/components/
-  profile-item.mjs
+  profile-item.js
   profile-item.html
 ```
 
@@ -393,7 +386,7 @@ The `.html` file contains one `<template>` element with a matching `id`:
 <!-- index.html -->
 <body>
   <profile-app></profile-app>
-  <script type="module" src="/app.mjs"></script>
+  <script type="module" src="/app.js"></script>
   <!-- {{templates}} -->
 </body>
 ```
@@ -426,7 +419,7 @@ Components must minimize imperative DOM construction. Follow these guidelines:
 - For field-to-display mappings (computed fields in `profile-summary`), derive keys from shared metadata:
 
 ```js
-import { profileFields } from '/shared/profile-domain.mjs';
+import { profileFields } from '/shared/profile.js';
 
 for (const [key, metadata] of Object.entries(profileFields)) {
   if (!metadata.computed) continue;
@@ -456,14 +449,14 @@ Each component has one clear responsibility:
 | `validation-message`    | Displays one error string                                                |
 | `profile-create-dialog` | Modal wrapper for the create flow                                        |
 
-Components do not perform network requests inline. They call the API facade from `api.mjs` or receive data through properties and events.
+Components do not perform network requests inline. They call the API facade from `api.js` or receive data through properties and events.
 
 ## 7. Shared Domain Module
 
 Create one shared module used by both client and server:
 
 ```text
-/shared/profile-domain.mjs
+/shared/profile.js
 ```
 
 It must export pure functions:
@@ -474,7 +467,7 @@ const normalizeProfile = (profile) => {
 };
 
 const validateProfile = (profile, now = new Date()) => {
-  // returns errors object
+  // returns errors object when invalid
 };
 
 const calculateProfile = (profile, now = new Date()) => {
@@ -482,7 +475,7 @@ const calculateProfile = (profile, now = new Date()) => {
 };
 
 const buildProfileState = (profile, now = new Date()) => {
-  // returns { profile, computed, errors, valid }
+  // returns { profile, computed, errors? }
 };
 
 export {
@@ -502,41 +495,40 @@ export {
 ## 8. Suggested Project Structure
 
 ```text
-server.js                   entry point: routing table + dispatcher + bootstrap
+server.js                   entry point: bootstrap + dispatch
 routes/
-  static.js                 static file and shared module serving
-  directory.js              GET /profile  (search/list)
-  profiles.js               POST /profiles  (create)
-  profile.js                GET|POST|PUT|DELETE /profile/:username
+  static.js                 static file cache and serving
+  search.js                 GET /search?name=&email=
+  profile.js                GET|POST|DELETE /profile/{username}, PUT /profile
 shared/
-  profile-domain.mjs        shared domain: normalize, validate, calculate
+  profile.js                 shared domain: normalize, validate, calculate
 data/
   profile/
     marcus.json
     faustina.json
 static/
   index.html                SPA shell (minimal, no embedded templates)
-  app.mjs                   imports and registers all components
-  api.mjs                   network facade (all fetch calls live here)
+  app.js                   imports and registers all components
+  api.js                   network facade (all fetch calls live here)
   styles.css
   components/
-    profile-app.mjs         + profile-app.html
-    profile-form.mjs        + profile-form.html
-    profile-field.mjs       + profile-field.html
-    profile-summary.mjs     + profile-summary.html
-    validation-message.mjs  + validation-message.html
-    profile-directory.mjs   + profile-directory.html
-    profile-search.mjs      + profile-search.html
-    profile-list.mjs
-    profile-item.mjs        + profile-item.html
-    profile-create-dialog.mjs + profile-create-dialog.html
+    profile-app.js         + profile-app.html
+    profile-form.js        + profile-form.html
+    profile-field.js       + profile-field.html
+    profile-summary.js     + profile-summary.html
+    validation-message.js  + validation-message.html
+    profile-directory.js   + profile-directory.html
+    profile-search.js      + profile-search.html
+    profile-list.js
+    profile-item.js        + profile-item.html
+    profile-create-dialog.js + profile-create-dialog.html
 ```
 
 ## 9. API Contract
 
 Profile routes use a dynamic username segment. The username must match the file name in `./data/profile/` without the `.json` extension.
 
-GET `/profile?name={value}&email={value}`
+GET `/search?name={value}&email={value}`
 
 Success response:
 
@@ -561,7 +553,7 @@ Notes:
 - `name` supports partial matches against `firstName`, `lastName` and `displayName`
 - `email` supports partial matches against `email`
 
-POST `/profiles`
+PUT `/profile`
 
 Request body:
 
@@ -580,9 +572,7 @@ Success response:
 {
   "ok": true,
   "profile": {},
-  "computed": {},
-  "errors": {},
-  "valid": true
+  "computed": {}
 }
 ```
 
@@ -591,7 +581,7 @@ Conflict response (id already exists):
 ```json
 {
   "ok": false,
-  "error": "Profile already exists"
+  "errors": { "id": "Profile already exists" }
 }
 ```
 
@@ -603,9 +593,7 @@ Success response:
 {
   "ok": true,
   "profile": {},
-  "computed": {},
-  "errors": {},
-  "valid": true
+  "computed": {}
 }
 ```
 
@@ -627,9 +615,7 @@ Success response:
 {
   "ok": true,
   "profile": {},
-  "computed": {},
-  "errors": {},
-  "valid": true
+  "computed": {}
 }
 ```
 
@@ -640,8 +626,7 @@ Validation error response:
   "ok": false,
   "profile": {},
   "computed": {},
-  "errors": {},
-  "valid": false
+  "errors": { "email": "Invalid email" }
 }
 ```
 
@@ -685,9 +670,9 @@ http://127.0.0.1:8000/profile/marcus
 - No npm dependencies are installed.
 - No framework or bundler is used.
 - The implementation remains small and readable.
-- All `fetch` calls are in `static/api.mjs` only.
-- The server routing table is a data structure iterated by a single dispatcher, not a chain of `if/else`.
-- All `<template>` elements are declared in `index.html`; component `.mjs` files contain no template strings.
+- All `fetch` calls are in `static/api.js` only.
+- The server routing table maps the first URL segment to a route module loaded from `routes/`; `server.js` is not a chain of `if/else`.
+- All `<template>` elements are declared in `index.html`; component `.js` files contain no template strings.
 - Components contain no inline `fetch` calls and no raw DOM construction loops.
 
 ## 11. Non-Goals

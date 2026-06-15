@@ -1,15 +1,13 @@
-import { readdir, readFile, writeFile, unlink } from 'node:fs/promises';
+import { readFile, writeFile, unlink, stat } from 'node:fs/promises';
 import path from 'node:path';
-import config from '../config.mjs';
-import {
-  buildProfileState,
-  isValidUsername,
-} from '../shared/profile-domain.mjs';
+import config from '../config.js';
+import { buildProfileState, profileFields } from '../shared/profile.js';
 
-const usernamePath = (username) =>
-  isValidUsername(username)
-    ? path.join(config.PROFILE_DIR, `${username}.json`)
-    : null;
+const usernamePath = (username) => {
+  const id = typeof username === 'string' ? username.trim() : '';
+  if (!id || !profileFields.id.pattern.test(id)) return null;
+  return path.join(config.PROFILE_DIR, `${id}.json`);
+};
 
 const readProfile = async (username) => {
   const filePath = usernamePath(username);
@@ -30,7 +28,7 @@ const saveProfileState = async (username, incoming) => {
   const merged = { ...incoming, id: username };
   const state = buildProfileState(merged);
 
-  if (!state.valid) {
+  if (state.errors) {
     return { status: 422, json: { ok: false, ...state } };
   }
 
@@ -38,8 +36,8 @@ const saveProfileState = async (username, incoming) => {
   return { status: 200, json: { ok: true, ...state } };
 };
 
-const getProfile = async (channel, { username }) => {
-  if (!isValidUsername(username)) return { status: 404, html: 'Not found' };
+const getProfile = async (channel, username) => {
+  if (!usernamePath(username)) return { status: 404, html: 'Not found' };
 
   const accept = channel.req.headers.accept || '';
   if (accept.includes('text/html') && !accept.includes('application/json')) {
@@ -59,14 +57,46 @@ const getProfile = async (channel, { username }) => {
   }
 };
 
-const updateProfile = async (channel, { username }) => {
-  if (!isValidUsername(username)) return { status: 404, html: 'Not found' };
+const createProfile = async (channel) => {
+  const raw = await channel.receiveBody();
+  const body = raw ? JSON.parse(raw) : {};
+  const requestedId = typeof body.id === 'string' ? body.id.trim() : '';
+
+  if (!usernamePath(requestedId)) {
+    return {
+      status: 422,
+      json: { ok: false, errors: { id: 'Invalid username' } },
+    };
+  }
+
+  const filePath = usernamePath(requestedId);
+  try {
+    await stat(filePath);
+    return {
+      status: 409,
+      json: { ok: false, errors: { id: 'Profile already exists' } },
+    };
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+
+  const state = buildProfileState({ ...body, id: requestedId });
+  if (state.errors) {
+    return { status: 422, json: { ok: false, ...state } };
+  }
+
+  await writeFile(filePath, JSON.stringify(state.profile, null, 2), 'utf8');
+  return { status: 201, json: { ok: true, ...state } };
+};
+
+const updateProfile = async (channel, username) => {
+  if (!usernamePath(username)) return { status: 404, html: 'Not found' };
   const raw = await channel.receiveBody();
   const body = raw ? JSON.parse(raw) : {};
   return saveProfileState(username, body);
 };
 
-const removeProfile = async (_channel, { username }) => {
+const removeProfile = async (_channel, username) => {
   const target = usernamePath(username);
   if (!target) return { status: 404, html: 'Not found' };
   try {
@@ -78,53 +108,9 @@ const removeProfile = async (_channel, { username }) => {
   }
 };
 
-const listProfiles = async (channel) => {
-  const query = channel.req.url.split('?')[1] || '';
-  const params = new URLSearchParams(query);
-  const nameFilter = params.get('name')?.toLowerCase() || '';
-  const emailFilter = params.get('email')?.toLowerCase() || '';
-
-  const files = await readdir(config.PROFILE_DIR).catch(() => []);
-  const profiles = await Promise.all(
-    files
-      .filter((f) => f.endsWith('.json'))
-      .map(async (f) => {
-        try {
-          const raw = await readFile(path.join(config.PROFILE_DIR, f), 'utf8');
-          const { profile, computed } = buildProfileState(JSON.parse(raw));
-          return {
-            id: profile.id,
-            displayName: computed.displayName,
-            email: profile.email,
-          };
-        } catch {
-          return null;
-        }
-      }),
-  );
-
-  const items = profiles
-    .filter(Boolean)
-    .filter(
-      (p) => !nameFilter || p.displayName.toLowerCase().includes(nameFilter),
-    )
-    .filter((p) => !emailFilter || p.email.toLowerCase().includes(emailFilter))
-    .sort((a, b) => a.id.localeCompare(b.id));
-
-  return { json: { ok: true, items } };
-};
-
 export default {
-  routes: [
-    { pattern: '/profile', handlers: { GET: listProfiles } },
-    {
-      pattern: '/profile/:username',
-      handlers: {
-        GET: getProfile,
-        POST: updateProfile,
-        PUT: updateProfile,
-        DELETE: removeProfile,
-      },
-    },
-  ],
+  GET: getProfile,
+  POST: updateProfile,
+  PUT: createProfile,
+  DELETE: removeProfile,
 };

@@ -234,13 +234,7 @@ const buildProfileState = (profile, now = new Date()) => {
   const normalized = normalizeProfile(profile);
   const errors = validateProfile(normalized, now);
   const computed = calculateProfile(normalized, now);
-  const valid = Object.keys(errors).length === 0;
-  return { profile: normalized, computed, errors, valid };
-};
-
-const isValidUsername = (value) => {
-  const id = toString(value);
-  return id.length > 0 && profileFields.id.pattern.test(id);
+  return { profile: normalized, computed, errors };
 };
 
 export {
@@ -249,5 +243,4 @@ export {
   validateProfile,
   calculateProfile,
   buildProfileState,
-  isValidUsername,
 };
