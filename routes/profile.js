@@ -1,156 +1,106 @@
 import { readdir, readFile, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
-import { buildProfileState } from '../shared/profile-domain.mjs';
+import config from '../config.mjs';
+import {
+  buildProfileState,
+  isValidUsername,
+} from '../shared/profile-domain.mjs';
 
-const USERNAME_RE = /^[a-z0-9][a-z0-9-]{1,63}$/i;
+const usernamePath = (username) =>
+  isValidUsername(username)
+    ? path.join(config.PROFILE_DIR, `${username}.json`)
+    : null;
 
-const usernameToPath = (username, profileDir) => {
-  if (!USERNAME_RE.test(username)) return null;
-  return path.join(profileDir, `${username}.json`);
-};
-
-const readProfile = async (username, profileDir) => {
-  const filePath = usernameToPath(username, profileDir);
+const readProfile = async (username) => {
+  const filePath = usernamePath(username);
   if (!filePath) return null;
   const raw = await readFile(filePath, 'utf8');
   return JSON.parse(raw);
 };
 
-const saveProfileState = async (username, incoming, profileDir) => {
-  const filePath = usernameToPath(username, profileDir);
+const saveProfileState = async (username, incoming) => {
+  const filePath = usernamePath(username);
   if (!filePath) {
     return {
       status: 422,
-      payload: { ok: false, errors: { id: 'Invalid username' } },
+      json: { ok: false, errors: { id: 'Invalid username' } },
     };
   }
 
-  const merged = { ...(incoming || {}), id: username };
+  const merged = { ...incoming, id: username };
   const state = buildProfileState(merged);
 
   if (!state.valid) {
-    return {
-      status: 422,
-      payload: { ok: false, ...state },
-    };
+    return { status: 422, json: { ok: false, ...state } };
   }
 
-  const data = JSON.stringify(state.profile, null, 2);
-  await writeFile(filePath, data, 'utf8');
-  return {
-    status: 200,
-    payload: { ok: true, ...state },
-  };
+  await writeFile(filePath, JSON.stringify(state.profile, null, 2), 'utf8');
+  return { status: 200, json: { ok: true, ...state } };
 };
 
-const getProfile = async (
-  req,
-  res,
-  { username },
-  { profileDir, sendJson, serveFile, staticDir },
-) => {
-  if (!USERNAME_RE.test(username)) {
-    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Not found');
-    return;
-  }
-  const accept = req.headers.accept || '';
+const getProfile = async (channel, { username }) => {
+  if (!isValidUsername(username)) return { status: 404, html: 'Not found' };
+
+  const accept = channel.req.headers.accept || '';
   if (accept.includes('text/html') && !accept.includes('application/json')) {
-    await serveFile(res, path.join(staticDir, 'index.html'));
-    return;
+    return { serve: path.join(config.STATIC_DIR, 'index.html') };
   }
+
   try {
-    const source = await readProfile(username, profileDir);
+    const source = await readProfile(username);
     const state = buildProfileState(source);
-    sendJson(res, 200, { ok: true, ...state });
+    return { json: { ok: true, ...state } };
   } catch (error) {
-    if (error?.code === 'ENOENT') {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Not found');
-      return;
-    }
+    if (error?.code === 'ENOENT') return { status: 404, html: 'Not found' };
     if (error instanceof SyntaxError) {
-      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Corrupt profile JSON');
-      return;
+      return { status: 500, html: 'Corrupt profile JSON' };
     }
     throw error;
   }
 };
 
-const updateProfile = async (
-  req,
-  res,
-  { username },
-  { profileDir, sendJson, parseJsonBody },
-) => {
-  if (!USERNAME_RE.test(username)) {
-    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Not found');
-    return;
-  }
-  let body;
-  try {
-    body = await parseJsonBody(req);
-  } catch (error) {
-    if (error.message === 'INVALID_JSON') {
-      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Invalid JSON');
-      return;
-    }
-    throw error;
-  }
-  const result = await saveProfileState(username, body, profileDir);
-  sendJson(res, result.status, result.payload);
+const updateProfile = async (channel, { username }) => {
+  if (!isValidUsername(username)) return { status: 404, html: 'Not found' };
+  const raw = await channel.receiveBody();
+  const body = raw ? JSON.parse(raw) : {};
+  return saveProfileState(username, body);
 };
 
-const removeProfile = async (
-  req,
-  res,
-  { username },
-  { profileDir, sendJson },
-) => {
-  const target = usernameToPath(username, profileDir);
-  if (!target) {
-    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Not found');
-    return;
-  }
+const removeProfile = async (_channel, { username }) => {
+  const target = usernamePath(username);
+  if (!target) return { status: 404, html: 'Not found' };
   try {
     await unlink(target);
-    sendJson(res, 200, { ok: true });
+    return { json: { ok: true } };
   } catch (error) {
-    if (error?.code === 'ENOENT') {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Not found');
-      return;
-    }
+    if (error?.code === 'ENOENT') return { status: 404, html: 'Not found' };
     throw error;
   }
 };
 
-const listProfiles = async (req, res, _params, { profileDir, sendJson }) => {
-  const url = new URL(req.url, 'http://localhost');
-  const nameFilter = url.searchParams.get('name')?.toLowerCase() || '';
-  const emailFilter = url.searchParams.get('email')?.toLowerCase() || '';
+const listProfiles = async (channel) => {
+  const query = channel.req.url.split('?')[1] || '';
+  const params = new URLSearchParams(query);
+  const nameFilter = params.get('name')?.toLowerCase() || '';
+  const emailFilter = params.get('email')?.toLowerCase() || '';
 
-  const files = await readdir(profileDir).catch(() => []);
-  const jsonFiles = files.filter((f) => f.endsWith('.json'));
-
+  const files = await readdir(config.PROFILE_DIR).catch(() => []);
   const profiles = await Promise.all(
-    jsonFiles.map(async (f) => {
-      try {
-        const raw = await readFile(path.join(profileDir, f), 'utf8');
-        const { profile, computed } = buildProfileState(JSON.parse(raw));
-        return {
-          id: profile.id,
-          displayName: computed.displayName,
-          email: profile.email,
-        };
-      } catch {
-        return null;
-      }
-    }),
+    files
+      .filter((f) => f.endsWith('.json'))
+      .map(async (f) => {
+        try {
+          const raw = await readFile(path.join(config.PROFILE_DIR, f), 'utf8');
+          const { profile, computed } = buildProfileState(JSON.parse(raw));
+          return {
+            id: profile.id,
+            displayName: computed.displayName,
+            email: profile.email,
+          };
+        } catch {
+          return null;
+        }
+      }),
   );
 
   const items = profiles
@@ -161,18 +111,20 @@ const listProfiles = async (req, res, _params, { profileDir, sendJson }) => {
     .filter((p) => !emailFilter || p.email.toLowerCase().includes(emailFilter))
     .sort((a, b) => a.id.localeCompare(b.id));
 
-  sendJson(res, 200, { ok: true, items });
+  return { json: { ok: true, items } };
 };
 
-export const routes = [
-  { pattern: '/profile', handlers: { GET: listProfiles } },
-  {
-    pattern: '/profile/:username',
-    handlers: {
-      GET: getProfile,
-      POST: updateProfile,
-      PUT: updateProfile,
-      DELETE: removeProfile,
+export default {
+  routes: [
+    { pattern: '/profile', handlers: { GET: listProfiles } },
+    {
+      pattern: '/profile/:username',
+      handlers: {
+        GET: getProfile,
+        POST: updateProfile,
+        PUT: updateProfile,
+        DELETE: removeProfile,
+      },
     },
-  },
-];
+  ],
+};

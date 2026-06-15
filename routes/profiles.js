@@ -1,52 +1,43 @@
-import { buildProfileState } from '../shared/profile-domain.mjs';
 import { stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import config from '../config.mjs';
+import {
+  buildProfileState,
+  isValidUsername,
+} from '../shared/profile-domain.mjs';
 
-const USERNAME_RE = /^[a-z0-9][a-z0-9-]{1,63}$/i;
-
-const createProfile = async (
-  req,
-  res,
-  _params,
-  { profileDir, sendJson, parseJsonBody },
-) => {
-  let body;
-  try {
-    body = await parseJsonBody(req);
-  } catch (error) {
-    if (error.message === 'INVALID_JSON') {
-      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Invalid JSON');
-      return;
-    }
-    throw error;
-  }
-
+const createProfile = async (channel) => {
+  const raw = await channel.receiveBody();
+  const body = raw ? JSON.parse(raw) : {};
   const requestedId = typeof body.id === 'string' ? body.id.trim() : '';
-  if (!USERNAME_RE.test(requestedId)) {
-    sendJson(res, 422, { ok: false, errors: { id: 'Invalid username' } });
-    return;
+
+  if (!isValidUsername(requestedId)) {
+    return {
+      status: 422,
+      json: { ok: false, errors: 'Invalid username' },
+    };
   }
 
-  const filePath = path.join(profileDir, `${requestedId}.json`);
+  const filePath = path.join(config.PROFILE_DIR, `${requestedId}.json`);
   try {
     await stat(filePath);
-    sendJson(res, 409, { ok: false, error: 'Profile already exists' });
-    return;
+    const message = 'Profile already exists';
+    return {
+      status: 409,
+      json: { ok: false, errors: message },
+    };
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
   }
 
-  const merged = { ...body, id: requestedId };
-  const state = buildProfileState(merged);
-
+  const state = buildProfileState({ ...body, id: requestedId });
   if (!state.valid) {
-    sendJson(res, 422, { ok: false, ...state });
-    return;
+    return { status: 422, json: { ok: false, ...state } };
   }
 
-  await writeFile(filePath, JSON.stringify(state.profile, null, 2), 'utf8');
-  sendJson(res, 200, { ok: true, ...state });
+  const data = JSON.stringify(state.profile, null, 2);
+  await writeFile(filePath, data, 'utf8');
+  return { status: 201, json: { ok: true, ...state } };
 };
 
 export default { POST: createProfile };

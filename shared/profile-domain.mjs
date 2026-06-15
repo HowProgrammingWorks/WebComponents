@@ -238,10 +238,16 @@ const buildProfileState = (profile, now = new Date()) => {
   return { profile: normalized, computed, errors, valid };
 };
 
+const isValidUsername = (value) => {
+  const id = toString(value);
+  return id.length > 0 && profileFields.id.pattern.test(id);
+};
+
 export {
   profileFields,
   normalizeProfile,
   validateProfile,
   calculateProfile,
   buildProfileState,
+  isValidUsername,
 };
