@@ -16,21 +16,26 @@ const readProfile = async (file) => {
 };
 
 const searchProfiles = async (channel) => {
-  const query = channel.req.url.split('?')[1] || '';
-  const params = new URLSearchParams(query);
-  const nameFilter = params.get('name')?.toLowerCase() || '';
-  const emailFilter = params.get('email')?.toLowerCase() || '';
+  const queryString = channel.req.url.split('?')[1] ?? '';
+  const params = new URLSearchParams(queryString);
+  const nameFilter = params.get('name')?.toLowerCase() ?? '';
+  const emailFilter = params.get('email')?.toLowerCase() ?? '';
 
   const dir = await readdir(config.PROFILE_DIR).catch(() => []);
   const files = dir.filter((f) => f.endsWith('.json'));
   const profiles = await Promise.all(files.map(readProfile));
 
   const items = [];
-  const includes = (value, filter) => value.toLowerCase().includes(filter);
+  const includes = (value, filter) =>
+    value.toLowerCase().includes(filter);
   for (const profile of profiles) {
     if (!profile) continue;
-    if (nameFilter && !includes(profile.displayName, nameFilter)) continue;
-    if (emailFilter && !includes(profile.email, emailFilter)) continue;
+    if (nameFilter && !includes(profile.displayName, nameFilter)) {
+      continue;
+    }
+    if (emailFilter && !includes(profile.email, emailFilter)) {
+      continue;
+    }
     items.push(profile);
   }
   items.sort((a, b) => a.id.localeCompare(b.id));

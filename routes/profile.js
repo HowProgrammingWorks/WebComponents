@@ -32,15 +32,18 @@ const saveProfileState = async (username, incoming) => {
     return { status: 422, json: { ok: false, ...state } };
   }
 
-  await writeFile(filePath, JSON.stringify(state.profile, null, 2), 'utf8');
+  const payload = JSON.stringify(state.profile, null, 2);
+  await writeFile(filePath, payload, 'utf8');
   return { status: 200, json: { ok: true, ...state } };
 };
 
 const getProfile = async (channel, username) => {
   if (!usernamePath(username)) return { status: 404, html: 'Not found' };
 
-  const accept = channel.req.headers.accept || '';
-  if (accept.includes('text/html') && !accept.includes('application/json')) {
+  const accept = channel.req.headers.accept ?? '';
+  const wantsHtml =
+    accept.includes('text/html') && !accept.includes('application/json');
+  if (wantsHtml) {
     return { serve: path.join(config.STATIC_DIR, 'index.html') };
   }
 
@@ -85,7 +88,8 @@ const createProfile = async (channel) => {
     return { status: 422, json: { ok: false, ...state } };
   }
 
-  await writeFile(filePath, JSON.stringify(state.profile, null, 2), 'utf8');
+  const payload = JSON.stringify(state.profile, null, 2);
+  await writeFile(filePath, payload, 'utf8');
   return { status: 201, json: { ok: true, ...state } };
 };
 

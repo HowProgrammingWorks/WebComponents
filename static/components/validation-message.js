@@ -22,7 +22,7 @@ class ValidationMessage extends HTMLElement {
   }
 
   render() {
-    this.textEl.textContent = this.getAttribute('message') || '';
+    this.textEl.textContent = this.getAttribute('message') ?? '';
   }
 }
 

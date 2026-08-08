@@ -119,7 +119,7 @@ const seniorityFromExperience = (years) => {
     { maxYears: 9, label: 'Senior' },
   ];
   const match = levels.find(({ maxYears }) => years <= maxYears);
-  return match ? match.label : 'Principal';
+  return match?.label ?? 'Principal';
 };
 
 const completeness = (profile) => {
@@ -128,13 +128,17 @@ const completeness = (profile) => {
   );
   const filled = profileFieldKeys.reduce((acc, key) => {
     const value = profile[key];
-    if (Array.isArray(value)) return acc + (value.length > 0 ? 1 : 0);
+    if (Array.isArray(value)) {
+      return acc + (value.length > 0 ? 1 : 0);
+    }
     if (typeof value === 'number') {
       return acc + (Number.isFinite(value) ? 1 : 0);
     }
-    return acc + (toString(value).length > 0 ? 1 : 0);
+    const text = toString(value);
+    return acc + (text.length > 0 ? 1 : 0);
   }, 0);
-  return Math.round((filled / profileFieldKeys.length) * 100);
+  const ratio = filled / profileFieldKeys.length;
+  return Math.round(ratio * 100);
 };
 
 const normalize = (profile) => {
@@ -153,21 +157,24 @@ const validate = (profile, now = new Date()) => {
   const today = isValidDate(now) ? new Date(now.valueOf()) : new Date();
   const birthDate = parseDate(normalized.birthDate);
   const hasIdPattern = Boolean(schema.id.pattern);
-  const hasInvalidIdPattern =
-    normalized.id && hasIdPattern && !schema.id.pattern.test(normalized.id);
+  const idFailsPattern =
+    normalized.id &&
+    hasIdPattern &&
+    !schema.id.pattern.test(normalized.id);
   const hasEmptySecondarySkill = normalized.secondarySkills.some(
     (item) => toString(item).length === 0,
   );
 
   for (const [key, metadata] of Object.entries(schema)) {
     if (metadata.computed) continue;
-    if (!matchesExpectedType(normalized[key], metadata.type)) {
-      errors[key] = `Expected ${metadata.type} value`;
+    const expected = metadata.type;
+    if (!matchesExpectedType(normalized[key], expected)) {
+      errors[key] = `Expected ${expected} value`;
     }
   }
 
   if (!normalized.id) errors.id = 'Username is required';
-  if (hasInvalidIdPattern) {
+  if (idFailsPattern) {
     errors.id = schema.id.message;
   }
   if (!normalized.firstName) errors.firstName = 'First name is required';
@@ -187,19 +194,24 @@ const validate = (profile, now = new Date()) => {
   }
 
   if (hasEmptySecondarySkill) {
-    errors.secondarySkills = 'Secondary skills must contain non-empty strings';
+    errors.secondarySkills =
+      'Secondary skills must contain non-empty strings';
   }
 
-  return Object.keys(errors).length > 0 ? errors : undefined;
+  const hasErrors = Object.keys(errors).length > 0;
+  return hasErrors ? errors : undefined;
 };
 
 const calculate = (profile, now = new Date()) => {
   const normalized = normalize(profile);
   const birthDate = parseDate(normalized.birthDate);
   const age = calculateAge(birthDate, now);
-  const displayName = `${normalized.firstName} ${normalized.lastName}`.trim();
-  const monthlyCapacityHours = normalized.weeklyAvailabilityHours * 4;
-  const estimatedMonthlyIncome = monthlyCapacityHours * normalized.hourlyRate;
+  const { firstName, lastName } = normalized;
+  const displayName = `${firstName} ${lastName}`.trim();
+  const weeklyHours = normalized.weeklyAvailabilityHours;
+  const monthlyCapacityHours = weeklyHours * 4;
+  const estimatedMonthlyIncome =
+    monthlyCapacityHours * normalized.hourlyRate;
 
   return {
     displayName,
@@ -208,7 +220,7 @@ const calculate = (profile, now = new Date()) => {
     monthlyCapacityHours,
     estimatedMonthlyIncome,
     profileCompleteness: completeness(normalized),
-    publicSlug: toSlug(normalized.firstName, normalized.lastName),
+    publicSlug: toSlug(firstName, lastName),
   };
 };
 

@@ -4,6 +4,36 @@ import './profile-summary.js';
 
 const template = document.getElementById('profile-form');
 
+const resolveFieldType = (metadata) => {
+  if (metadata.inputType) return metadata.inputType;
+  if (metadata.type === 'number' || metadata.type === 'integer') {
+    return 'number';
+  }
+  return 'text';
+};
+
+const coerceFieldValue = (name, value) => {
+  if (name === 'secondarySkills') {
+    return value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  const fieldType = schema[name]?.type;
+  if (fieldType === 'number' || fieldType === 'integer') {
+    return value === '' ? 0 : Number(value);
+  }
+  return value;
+};
+
+const displayFieldValue = (name, raw) => {
+  if (name === 'secondarySkills') {
+    return Array.isArray(raw) ? raw.join(', ') : '';
+  }
+  if (raw === null || raw === undefined) return '';
+  return String(raw);
+};
+
 class ProfileForm extends HTMLElement {
   #state = buildState({});
   #editableId = false;
@@ -29,7 +59,8 @@ class ProfileForm extends HTMLElement {
       this.handleSave();
     });
     this.formEl.addEventListener('field-change', (event) => {
-      this.updateField(event.detail.name, event.detail.value);
+      const { name, value } = event.detail;
+      this.updateField(name, value);
     });
     this.render();
   }
@@ -64,17 +95,9 @@ class ProfileForm extends HTMLElement {
       if (metadata.computed) continue;
       const field = document.createElement('profile-field');
       field.setAttribute('name', name);
-      let label = name;
-      if (metadata.label) label = metadata.label;
+      const label = metadata.label || name;
       field.setAttribute('label', label);
-
-      let type = 'text';
-      if (metadata.inputType) {
-        type = metadata.inputType;
-      } else if (metadata.type === 'number' || metadata.type === 'integer') {
-        type = 'number';
-      }
-      field.setAttribute('type', type);
+      field.setAttribute('type', resolveFieldType(metadata));
       if (metadata.multiline) field.setAttribute('multiline', '');
       this.#fieldEls.set(name, field);
       nodes.push(field);
@@ -84,19 +107,7 @@ class ProfileForm extends HTMLElement {
 
   updateField(name, value) {
     const next = { ...this.state.profile };
-    if (name === 'secondarySkills') {
-      next[name] = value
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-    } else if (
-      schema[name]?.type === 'number' ||
-      schema[name]?.type === 'integer'
-    ) {
-      next[name] = value === '' ? 0 : Number(value);
-    } else {
-      next[name] = value;
-    }
+    next[name] = coerceFieldValue(name, value);
 
     this.#state = buildState(next);
     const event = new CustomEvent('profile-state-change', {
@@ -137,12 +148,10 @@ class ProfileForm extends HTMLElement {
   }
 
   render() {
-    this.summaryEl.setAttribute(
-      'values',
-      JSON.stringify(this.state.computed || {}),
-    );
+    const computed = this.state.computed ?? {};
+    this.summaryEl.setAttribute('values', JSON.stringify(computed));
     if (!this.isConnected) return;
-    const profile = this.state?.profile || {};
+    const profile = this.state?.profile ?? {};
     const errors = this.state?.errors ?? {};
 
     let title = 'Profile';
@@ -157,15 +166,9 @@ class ProfileForm extends HTMLElement {
       if (metadata.computed) continue;
       const field = this.#fieldEls.get(name);
       if (!field) continue;
-      const raw = profile[name];
-      let display;
-      if (name === 'secondarySkills') {
-        display = Array.isArray(raw) ? raw.join(', ') : '';
-      } else {
-        display = raw === null || raw === undefined ? '' : String(raw);
-      }
+      const display = displayFieldValue(name, profile[name]);
       field.setAttribute('value', display);
-      field.setAttribute('error', errors[name] || '');
+      field.setAttribute('error', errors[name] ?? '');
       if (name === 'id' && !this.#editableId) {
         field.setAttribute('disabled', '');
       } else {

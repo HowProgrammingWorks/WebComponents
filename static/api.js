@@ -1,6 +1,7 @@
 const HEADERS = { 'Content-Type': 'application/json' };
 
-const profileUrl = (username) => `/profile/${encodeURIComponent(username)}`;
+const profileUrl = (username) =>
+  `/profile/${encodeURIComponent(username)}`;
 
 const fetchJson = async (url, options = {}) => {
   const res = await fetch(url, options);
@@ -8,7 +9,8 @@ const fetchJson = async (url, options = {}) => {
   return { ok: res.ok, status: res.status, body };
 };
 
-const errorsFrom = (body, fallback) => body?.errors ?? { general: fallback };
+const errorsFrom = (body, fallback) =>
+  body?.errors ?? { general: fallback };
 
 const getProfile = async (username) => {
   const options = { headers: { Accept: 'application/json' } };
@@ -46,7 +48,9 @@ const createProfile = async (data) => {
   const json = JSON.stringify(data);
   const options = { method: 'PUT', headers: HEADERS, body: json };
   const { ok, body } = await fetchJson('/profile', options);
-  if (!ok) return { ok: false, errors: errorsFrom(body, 'Create failed') };
+  if (!ok) {
+    return { ok: false, errors: errorsFrom(body, 'Create failed') };
+  }
   return body;
 };
 

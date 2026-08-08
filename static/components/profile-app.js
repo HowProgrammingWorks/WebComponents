@@ -10,15 +10,20 @@ const matchPattern = (pattern, pathname) => {
   const params = {};
   for (let i = 0; i < patternParts.length; i++) {
     const part = patternParts[i];
-    if (part.startsWith(':')) params[part.slice(1)] = pathParts[i];
-    else if (part !== pathParts[i]) return null;
+    if (part.startsWith(':')) {
+      const name = part.slice(1);
+      params[name] = pathParts[i];
+    } else if (part !== pathParts[i]) {
+      return null;
+    }
   }
   return params;
 };
 
 const routes = {
   '/': (app) => {
-    app.main.append(document.createElement('profile-directory'));
+    const directory = document.createElement('profile-directory');
+    app.main.append(directory);
   },
   '/new': (app) => {
     app.renderCreate();
@@ -45,7 +50,8 @@ class ProfileApp extends HTMLElement {
     });
 
     this.shadowRoot.addEventListener('navigate-profile', (event) => {
-      window.navigation.navigate(event.detail.path);
+      const { path } = event.detail;
+      window.navigation.navigate(path);
     });
 
     window.navigation.addEventListener('navigate', (event) => {
@@ -83,7 +89,8 @@ class ProfileApp extends HTMLElement {
     form.editableId = true;
     form.state = buildState({});
     form.addEventListener('profile-created', (event) => {
-      window.navigation.navigate(`/profile/${event.detail.id}`);
+      const { id } = event.detail;
+      window.navigation.navigate(`/profile/${id}`);
     });
     this.main.replaceChildren(form);
   }

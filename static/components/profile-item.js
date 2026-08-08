@@ -12,18 +12,22 @@ class ProfileItem extends HTMLElement {
     this.shadowRoot.append(content);
   }
 
+  get profileId() {
+    return this.getAttribute('profile-id') ?? '';
+  }
+
   connectedCallback() {
     this.render();
     this.openBtn.addEventListener('click', () => {
       const event = new CustomEvent('open-profile', {
-        detail: { id: this.getAttribute('profile-id') || '' },
+        detail: { id: this.profileId },
         bubbles: true,
       });
       this.dispatchEvent(event);
     });
     this.deleteBtn.addEventListener('click', () => {
       const event = new CustomEvent('delete-profile', {
-        detail: { id: this.getAttribute('profile-id') || '' },
+        detail: { id: this.profileId },
         bubbles: true,
       });
       this.dispatchEvent(event);
@@ -39,8 +43,8 @@ class ProfileItem extends HTMLElement {
   }
 
   render() {
-    this.nameEl.textContent = this.getAttribute('display-name') || '';
-    this.emailEl.textContent = this.getAttribute('email') || '';
+    this.nameEl.textContent = this.getAttribute('display-name') ?? '';
+    this.emailEl.textContent = this.getAttribute('email') ?? '';
   }
 }
 

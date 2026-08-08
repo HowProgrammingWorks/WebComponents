@@ -2,6 +2,13 @@ import { schema } from '/shared/profile.js';
 
 const template = document.getElementById('profile-summary');
 
+const formatValue = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+  return String(value);
+};
+
 class ProfileSummary extends HTMLElement {
   constructor() {
     super();
@@ -36,11 +43,7 @@ class ProfileSummary extends HTMLElement {
       if (!metadata.computed) continue;
       const el = this.shadowRoot.getElementById(key);
       if (!el) continue;
-      const value = data[key];
-      el.textContent =
-        value === null || value === undefined || value === ''
-          ? '-'
-          : String(value);
+      el.textContent = formatValue(data[key]);
     }
   }
 }

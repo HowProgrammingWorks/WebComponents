@@ -13,16 +13,21 @@ const loadCache = async (staticDir) => {
     readdir(componentsDir),
   ]);
   const htmlFiles = files.filter((f) => f.endsWith('.html')).sort();
-  const readHtml = (f) => readFile(path.join(componentsDir, f), 'utf8');
+  const readHtml = (f) => {
+    const filePath = path.join(componentsDir, f);
+    return readFile(filePath, 'utf8');
+  };
   const parts = await Promise.all(htmlFiles.map(readHtml));
-  const data = Buffer.from(indexHtml.replace(PLACEHOLDER, parts.join('\n')));
+  const injected = indexHtml.replace(PLACEHOLDER, parts.join('\n'));
+  const data = Buffer.from(injected);
   fileCache.set(indexPath, data);
 };
 
 const serveFile = async (res, filePath) => {
   if (!fileCache.has(filePath)) {
     try {
-      fileCache.set(filePath, await readFile(filePath));
+      const contents = await readFile(filePath);
+      fileCache.set(filePath, contents);
     } catch (error) {
       if (error?.code === 'ENOENT') {
         new Channel(null, res).notFound();
@@ -31,7 +36,8 @@ const serveFile = async (res, filePath) => {
       throw error;
     }
   }
-  res.writeHead(200, { 'Content-Type': Channel.contentType(filePath) });
+  const contentType = Channel.contentType(filePath);
+  res.writeHead(200, { 'Content-Type': contentType });
   res.end(fileCache.get(filePath));
 };
 

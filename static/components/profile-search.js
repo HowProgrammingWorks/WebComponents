@@ -16,12 +16,11 @@ class ProfileSearch extends HTMLElement {
     const emit = () => {
       clearTimeout(this.#timer);
       this.#timer = setTimeout(() => {
-        const event = new CustomEvent('search-change', {
-          detail: {
-            name: this.nameInput.value,
-            email: this.emailInput.value,
-          },
-        });
+        const detail = {
+          name: this.nameInput.value,
+          email: this.emailInput.value,
+        };
+        const event = new CustomEvent('search-change', { detail });
         this.dispatchEvent(event);
       }, 250);
     };

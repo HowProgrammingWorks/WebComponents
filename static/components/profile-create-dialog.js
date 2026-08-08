@@ -46,8 +46,9 @@ class ProfileCreateDialog extends HTMLElement {
       this.form.serverErrors = result.errors;
       return;
     }
+    const { id } = result.profile;
     const event = new CustomEvent('profile-created', {
-      detail: { id: result.profile.id },
+      detail: { id },
     });
     this.dispatchEvent(event);
     this.close();

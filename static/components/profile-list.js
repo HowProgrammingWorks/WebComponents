@@ -24,9 +24,10 @@ class ProfileList extends HTMLElement {
     }
     const nodes = items.map((item) => {
       const el = document.createElement('profile-item');
+      const displayName = item.displayName || item.id;
       el.setAttribute('profile-id', item.id);
-      el.setAttribute('display-name', item.displayName || item.id);
-      el.setAttribute('email', item.email || '');
+      el.setAttribute('display-name', displayName);
+      el.setAttribute('email', item.email ?? '');
       return el;
     });
     this.replaceChildren(...nodes);

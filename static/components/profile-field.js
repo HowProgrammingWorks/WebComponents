@@ -11,8 +11,9 @@ class ProfileField extends HTMLElement {
     this.errorEl = content.getElementById('error');
 
     const emit = () => {
+      const detail = { name: this.fieldName, value: this.value };
       const event = new CustomEvent('field-change', {
-        detail: { name: this.fieldName, value: this.value },
+        detail,
         bubbles: true,
       });
       this.dispatchEvent(event);
@@ -35,7 +36,7 @@ class ProfileField extends HTMLElement {
   }
 
   get fieldName() {
-    return this.getAttribute('name') || '';
+    return this.getAttribute('name') ?? '';
   }
 
   get value() {
@@ -57,9 +58,9 @@ class ProfileField extends HTMLElement {
     this.labelEl.textContent = this.getAttribute('label') || this.fieldName;
 
     if (!multiline) this.inputEl.type = this.getAttribute('type') || 'text';
-    active.value = this.getAttribute('value') || '';
+    active.value = this.getAttribute('value') ?? '';
     active.disabled = disabled;
-    this.errorEl.setAttribute('message', this.getAttribute('error') || '');
+    this.errorEl.setAttribute('message', this.getAttribute('error') ?? '');
   }
 }
 

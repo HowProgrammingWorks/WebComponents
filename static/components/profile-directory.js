@@ -22,8 +22,9 @@ class ProfileDirectory extends HTMLElement {
       this.load();
     });
     this.list.addEventListener('open-profile', (openEvent) => {
+      const id = openEvent.detail.id;
       const event = new CustomEvent('navigate-profile', {
-        detail: { path: `/profile/${openEvent.detail.id}` },
+        detail: { path: `/profile/${id}` },
         bubbles: true,
       });
       this.dispatchEvent(event);
@@ -46,7 +47,8 @@ class ProfileDirectory extends HTMLElement {
   }
 
   async removeProfile(id) {
-    if (!window.confirm(`Delete profile "${id}"?`)) return;
+    const confirmed = window.confirm(`Delete profile "${id}"?`);
+    if (!confirmed) return;
     const { ok } = await deleteProfile(id);
     if (ok) this.load();
   }

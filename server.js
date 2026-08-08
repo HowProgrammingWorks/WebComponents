@@ -14,7 +14,8 @@ createServer(async (req, res) => {
     if (!req.url) return void channel.badRequest();
     const pathname = req.url.split('?')[0];
     const segments = pathname.split('/');
-    const route = routes[segments[1]];
+    const routeName = segments[1];
+    const route = routes[routeName];
     if (route) {
       await route(req, res, segments);
       return;
@@ -24,5 +25,6 @@ createServer(async (req, res) => {
     channel.serverError(error);
   }
 }).listen(config.PORT, config.HOST, () => {
-  console.log(`Server listening on http://${config.HOST}:${config.PORT}`);
+  const { HOST, PORT } = config;
+  console.log(`Server listening on http://${HOST}:${PORT}`);
 });
